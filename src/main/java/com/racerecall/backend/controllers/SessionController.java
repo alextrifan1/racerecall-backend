@@ -1,7 +1,7 @@
 package com.racerecall.backend.controllers;
 
 import com.racerecall.backend.models.SessionDto;
-import com.racerecall.backend.services.OpenF1Service;
+import com.racerecall.backend.services.SessionService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,10 +11,10 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173") // for the frontend
 public class SessionController {
 
-    private final OpenF1Service openF1Service;
+    private final SessionService sessionService;
 
-    public SessionController(OpenF1Service openF1Service) {
-        this.openF1Service = openF1Service;
+    public SessionController(SessionService sessionService) {
+        this.sessionService = sessionService;
     }
 
     @GetMapping
@@ -23,6 +23,6 @@ public class SessionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        return openF1Service.getPaginatedSession(year, page, size);
+        return sessionService.getPaginatedSessions(year, page, size);
     }
 }
