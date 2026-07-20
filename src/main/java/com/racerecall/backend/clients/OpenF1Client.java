@@ -1,6 +1,8 @@
 package com.racerecall.backend.clients;
 
+import com.racerecall.backend.models.DriverResultDto;
 import com.racerecall.backend.models.SessionDto;
+import com.racerecall.backend.models.WeatherDto;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -32,5 +34,56 @@ public class OpenF1Client {
                 })
                 .collectList()
                 .block();
+    }
+
+    @Cacheable("resultsBySession")
+    public List<DriverResultDto> fetchSessionResults(int sessionKey) {
+        System.out.println("Fetching race results for session: " + sessionKey);
+
+        return webClient.get()
+                .uri("/session_result?session_key={key}", sessionKey)
+                .retrieve()
+                .bodyToFlux(DriverResultDto.class)
+                .onErrorResume(WebClientResponseException.class, e -> Flux.empty())
+                .collectList()
+                .block();
+    }
+
+    @Cacheable("gridBySession")
+    public List<DriverResultDto> fetchStartingGrid(int sessionKey) {
+        System.out.println("Fetching starting grid for session: " + sessionKey);
+
+        return webClient.get()
+                .uri("/starting_grid?session_key={key}", sessionKey)
+                .retrieve()
+                .bodyToFlux(DriverResultDto.class)
+                .onErrorResume(WebClientResponseException.class, e -> Flux.empty())
+                .collectList()
+                .block();
+    }
+
+    @Cacheable("weatherBySession")
+    public List<WeatherDto> fetchWeather(int sessionKey) {
+        System.out.println("Fetching weather data for session: " + sessionKey);
+
+        return webClient.get()
+                .uri("/weather?session_key={key}", sessionKey)
+                .retrieve()
+                .bodyToFlux(WeatherDto.class)
+                .onErrorResume(WebClientResponseException.class, e -> Flux.empty())
+                .collectList()
+                .block();
+    }
+
+    @Cacheable("sessionByKey")
+    public SessionDto fetchSessionByKey(int sessionKey) {
+        System.out.println("Fetching single session info for: " + sessionKey);
+
+        return webClient.get()
+                .uri("/sessions?session_key={key}", sessionKey)
+                .retrieve()
+                .bodyToFlux(SessionDto.class)
+                .onErrorResume(e -> Flux.empty())
+                .blockFirst();
     }
 }

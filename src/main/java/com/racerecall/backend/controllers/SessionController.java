@@ -1,5 +1,6 @@
 package com.racerecall.backend.controllers;
 
+import com.racerecall.backend.models.SessionDetailsDto;
 import com.racerecall.backend.models.SessionDto;
 import com.racerecall.backend.services.SessionService;
 import org.springframework.web.bind.annotation.*;
@@ -25,4 +26,10 @@ public class SessionController {
 
         return sessionService.getPaginatedSessions(year, page, size);
     }
+
+    @GetMapping("/{sessionKey}/details")
+    public SessionDetailsDto getSessionDetails(@PathVariable int sessionkey) {
+        return sessionService.getSessionDetails(sessionkey);
+    }
+
 }
