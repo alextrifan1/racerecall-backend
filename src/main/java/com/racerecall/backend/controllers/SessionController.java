@@ -28,7 +28,7 @@ public class SessionController {
     }
 
     @GetMapping("/{sessionKey}/details")
-    public SessionDetailsDto getSessionDetails(@PathVariable int sessionkey) {
+    public SessionDetailsDto getSessionDetails(@PathVariable("sessionKey") int sessionkey) {
         return sessionService.getSessionDetails(sessionkey);
     }
 

@@ -23,6 +23,13 @@ public class RacerecallBackendApplication {
 
     @Bean
     public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager("sessionsByYear");
+        return new ConcurrentMapCacheManager(
+                "sessionsByYear",
+                "sessionByKey",
+                "resultsBySession",
+                "gridBySession",
+                "weatherBySession",
+                "driversBySession"
+        );
     }
 }

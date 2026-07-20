@@ -1,5 +1,6 @@
 package com.racerecall.backend.clients;
 
+import com.racerecall.backend.models.DriverDto;
 import com.racerecall.backend.models.DriverResultDto;
 import com.racerecall.backend.models.SessionDto;
 import com.racerecall.backend.models.WeatherDto;
@@ -85,5 +86,18 @@ public class OpenF1Client {
                 .bodyToFlux(SessionDto.class)
                 .onErrorResume(e -> Flux.empty())
                 .blockFirst();
+    }
+
+    @Cacheable("driversBySession")
+    public List<DriverDto> fetchDrivers(int sessionKey) {
+        System.out.println("Fetching drivers for session: " + sessionKey);
+
+        return webClient.get()
+                .uri("/drivers?session_key={key}", sessionKey)
+                .retrieve()
+                .bodyToFlux(DriverDto.class)
+                .onErrorResume(e -> Flux.empty())
+                .collectList()
+                .block();
     }
 }
