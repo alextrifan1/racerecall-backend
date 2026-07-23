@@ -18,17 +18,29 @@ public class SessionService {
     }
 
     public List<SessionDto> getPaginatedSessions(int year, int page, int size) {
-        // This cross-class call triggers the @Cacheable proxy
         List<SessionDto> allSessions = openF1Client.fetchSessions(year);
 
         if (allSessions.isEmpty()) {
             return allSessions;
         }
 
-        int start = Math.min(page * size, allSessions.size());
-        int end = Math.min((page + 1) * size, allSessions.size());
+        List<Integer> uniqueMeetings = allSessions.stream()
+                .map(SessionDto::meetingKey)
+                .distinct()
+                .toList();
 
-        return allSessions.subList(start, end);
+        int startMeeting = Math.min(page * size, uniqueMeetings.size());
+        int endMeeting = Math.min((page + 1) * size, uniqueMeetings.size());
+
+        if (startMeeting >= uniqueMeetings.size()) {
+            return List.of();
+        }
+
+        List<Integer> paginatedMeetingKeys = uniqueMeetings.subList(startMeeting, endMeeting);
+
+        return allSessions.stream()
+                .filter(session -> paginatedMeetingKeys.contains(session.meetingKey()))
+                .toList();
     }
 
     public SessionDetailsDto getSessionDetails(int sessionKey) {
@@ -38,7 +50,9 @@ public class SessionService {
         List<WeatherDto> weatherList = openF1Client.fetchWeather(sessionKey);
 
         //driver
-        List<DriverDto> drivers = openF1Client.fetchDrivers(sessionKey);
+        List<DriverDto> drivers = openF1Client.fetchDriversByMeeting(sessionInfo.meetingKey());
+        System.out.println("Total drivers fetched: " + drivers.size());
+
         Map<Integer, DriverDto> driverMap = drivers.stream()    //just in case the API accidentally returns duplicates
                 .collect(Collectors.toMap(DriverDto::driverNumber, d -> d, (existing, replacement) -> existing));
 

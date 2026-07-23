@@ -10,5 +10,6 @@ public record SessionDto(
         @JsonProperty("country_name") String countryName,
         @JsonProperty("location") String location,
         @JsonProperty("session_type") String sessionType,
-        @JsonProperty("circuit_short_name") String circuitShortName
+        @JsonProperty("circuit_short_name") String circuitShortName,
+        @JsonProperty("meeting_key") Integer meetingKey
 ) {}

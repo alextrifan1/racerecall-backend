@@ -29,7 +29,8 @@ public class RacerecallBackendApplication {
                 "resultsBySession",
                 "gridBySession",
                 "weatherBySession",
-                "driversBySession"
+                "driversBySession",
+                "driversByMeeting"
         );
     }
 }
