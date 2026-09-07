@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/sessions")
-@CrossOrigin(origins = {"http://localhost:5173", "https://racerecall-frontend-7g4u5txv4-zero-parades.vercel.app"})
+@RequestMapping("/api/sessions")
+@CrossOrigin(origins = "*")
 public class SessionController {
 
     private final SessionService sessionService;
