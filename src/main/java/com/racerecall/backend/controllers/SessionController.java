@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/sessions")
-@CrossOrigin(origins = {"http://localhost:5173", "https://racerecall-frontend.vercel.app"})
+@CrossOrigin(origins = {"http://localhost:5173", "https://racerecall-frontend-7g4u5txv4-zero-parades.vercel.app"})
 public class SessionController {
 
     private final SessionService sessionService;
