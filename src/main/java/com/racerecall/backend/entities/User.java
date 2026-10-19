@@ -1,6 +1,8 @@
 package com.racerecall.backend.entities;
 
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -20,6 +22,9 @@ public class User {
 
     private String role = "ROLE_USER";
 
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     public User() {}
 
     public User(String username, String password) {
@@ -38,4 +43,7 @@ public class User {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
