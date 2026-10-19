@@ -36,3 +36,7 @@ build/
 .env
 .env.local
 *.env
+
+### SQLite ###
+*.db
+*.db-journal
