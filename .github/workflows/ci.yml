@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the run that's still going
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and run tests
+        run: ./mvnw -B verify
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+
+  docker:
+    name: Docker image and health check
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t racerecall-backend:ci .
+
+      - name: Start container
+        run: |
+          docker run -d --name app -p 8080:8080 \
+            -e JWT_SECRET=ci-only-secret-that-is-at-least-32-characters-long \
+            racerecall-backend:ci
+
+      - name: Wait until the app is ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:8080/actuator/health/readiness; then
+              echo
+              echo "App is ready after ~$((i * 5)) seconds"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "App did not become ready in time. Container logs:"
+          docker logs app
+          exit 1
