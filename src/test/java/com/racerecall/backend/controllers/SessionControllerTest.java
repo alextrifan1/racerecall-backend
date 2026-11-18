@@ -1,0 +1,162 @@
+package com.racerecall.backend.controllers;
+
+import com.racerecall.backend.models.DriverResultDto;
+import com.racerecall.backend.models.SessionDetailsDto;
+import com.racerecall.backend.models.SessionDto;
+import com.racerecall.backend.models.WeatherDto;
+import com.racerecall.backend.services.CustomUserDetailsService;
+import com.racerecall.backend.services.JwtService;
+import com.racerecall.backend.services.SecurityConfig;
+import com.racerecall.backend.services.SessionService;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.NestedExceptionUtils;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(SessionController.class)
+@Import(SecurityConfig.class)
+@ActiveProfiles("test")
+public class SessionControllerTest {
+
+    private static final int SESSION_KEY = 9999;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private SessionService sessionService;
+
+    @MockitoBean
+    private JwtService jwtService;
+
+    @MockitoBean
+    private CustomUserDetailsService userDetailsService;
+
+    private static SessionDto session(int sessionKey) {
+        return new SessionDto(sessionKey, "Race", "2025-03-16T04:00:00+00:00", "2025-03-16T06:00:00+00:00",
+                "Australia", "Melbourne", "Race", "Melbourne", 1229);
+    }
+
+    @Nested
+    @DisplayName("GET /api/sessions")
+    class GetSessions {
+
+        @Test
+        @DisplayName("no query params uses the defaults year=2026, page=0, size=10")
+        void noParams_usesDefaults() throws Exception {
+            when(sessionService.getPaginatedSessions(2026, 0, 10)).thenReturn(List.of(session(1)));
+
+            mockMvc.perform(get("/api/sessions"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].session_key").value(1));
+        }
+
+        @Test
+        @DisplayName("query params are passed to the service")
+        void withParams_passesThemToService() throws Exception {
+            mockMvc.perform(get("/api/sessions")
+                            .param("year", "2025")
+                            .param("page", "1")
+                            .param("size", "5"))
+                    .andExpect(status().isOk());
+
+            verify(sessionService).getPaginatedSessions(2025, 1, 5);
+        }
+
+        @Test
+        @DisplayName("non-numeric year returns 400 and never reaches the service")
+        void nonNumericYear_returns400() throws Exception {
+            mockMvc.perform(get("/api/sessions").param("year", "abc"))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(sessionService);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/sessions/{sessionKey}/details")
+    class GetSessionDetails {
+
+        @Test
+        @DisplayName("returns session info, podium and weather in the JSON shape the frontend expects")
+        void returnsDetailsJson() throws Exception {
+            SessionDetailsDto details = new SessionDetailsDto(
+                    session(SESSION_KEY),
+                    List.of(new DriverResultDto(1, 1, "M VERSTAPPEN", "Red Bull Racing")),
+                    List.of(),
+                    new WeatherDto(24.5, 38.0, 0)
+            );
+            when(sessionService.getSessionDetails(SESSION_KEY)).thenReturn(details);
+
+            mockMvc.perform(get("/api/sessions/{key}/details", SESSION_KEY))
+                    .andExpect(status().isOk())
+                    // outer record has no @JsonProperty -> camelCase
+                    .andExpect(jsonPath("$.sessionInfo.session_key").value(SESSION_KEY))
+                    // nested records use @JsonProperty -> snake_case
+                    .andExpect(jsonPath("$.podium[0].broadcast_name").value("M VERSTAPPEN"))
+                    .andExpect(jsonPath("$.podium[0].team_name").value("Red Bull Racing"))
+                    .andExpect(jsonPath("$.weatherSnapshot.air_temperature").value(24.5));
+        }
+    }
+
+    @Nested
+    @DisplayName("security")
+    class Security {
+
+        @Test
+        @DisplayName("malformed token on a PUBLIC endpoint crashes the filter (BUG: should be ignored or 401)")
+        void malformedToken_onPublicEndpoint_crashesFilter() {
+            when(jwtService.extractUsername("not-a-jwt"))
+                    .thenThrow(new MalformedJwtException("Malformed JWT"));
+
+            Throwable thrown = catchThrowable(() -> mockMvc.perform(get("/api/sessions")
+                    .header("Authorization", "Bearer not-a-jwt")));
+
+            assertThat(thrown).isNotNull();
+            assertThat(NestedExceptionUtils.getMostSpecificCause(thrown)).isInstanceOf(JwtException.class);
+            verifyNoInteractions(sessionService);
+        }
+
+        @Test
+        @DisplayName("valid token for a deleted user crashes the filter (BUG: should be ignored or 401)")
+        void tokenForDeletedUser_crashesFilter() {
+            when(jwtService.extractUsername("old-token")).thenReturn("deleted-user");
+            when(userDetailsService.loadUserByUsername("deleted-user"))
+                    .thenThrow(new UsernameNotFoundException("User not found: deleted-user"));
+
+            Throwable thrown = catchThrowable(() -> mockMvc.perform(get("/api/sessions")
+                    .header("Authorization", "Bearer old-token")));
+
+            assertThat(thrown).isNotNull();
+            assertThat(NestedExceptionUtils.getMostSpecificCause(thrown))
+                    .isInstanceOf(UsernameNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("unlisted route without a token is rejected with 403 (an API would normally use 401)")
+        void protectedRoute_noToken_returns403() throws Exception {
+            mockMvc.perform(get("/api/something-private"))
+                    .andExpect(status().isForbidden());
+        }
+    }
+}
