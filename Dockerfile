@@ -14,4 +14,7 @@ COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 8080
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+  CMD wget -qO- http://localhost:${PORT:-8080}/actuator/health/readiness || exit 1
+
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=60.0", "-jar", "app.jar"]
