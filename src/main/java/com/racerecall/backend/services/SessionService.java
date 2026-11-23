@@ -1,6 +1,7 @@
 package com.racerecall.backend.services;
 
 import com.racerecall.backend.clients.OpenF1Client;
+import com.racerecall.backend.exceptions.SessionNotFoundException;
 import com.racerecall.backend.models.*;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +46,9 @@ public class SessionService {
 
     public SessionDetailsDto getSessionDetails(int sessionKey) {
         SessionDto sessionInfo = openF1Client.fetchSessionByKey(sessionKey);
+        if (sessionInfo == null) {
+            throw new SessionNotFoundException(sessionKey);
+        }
         List<DriverResultDto> allResults = openF1Client.fetchSessionResults(sessionKey);
         List<DriverResultDto> startingGrid = openF1Client.fetchStartingGrid(sessionKey);
         List<WeatherDto> weatherList = openF1Client.fetchWeather(sessionKey);

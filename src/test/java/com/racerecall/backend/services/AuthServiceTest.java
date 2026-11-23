@@ -1,6 +1,7 @@
 package com.racerecall.backend.services;
 
 import com.racerecall.backend.entities.User;
+import com.racerecall.backend.exceptions.UsernameAlreadyExistsException;
 import com.racerecall.backend.models.AuthRequest;
 import com.racerecall.backend.models.AuthResponse;
 import com.racerecall.backend.repositories.UserRepository;
@@ -66,13 +67,13 @@ public class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("taken username throws and nothing is saved (BUG: controller truns this into 500")
+        @DisplayName("taken username throws and nothing is saved")
         void register_existingUsername_throwsAndDoesNotSave() {
             when(userRepository.findByUsername(USERNAME)).thenReturn(Optional.of(new User(USERNAME, "someone-elses-hash")));
 
             assertThatThrownBy(() -> authService.register(request))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessage("Username is already in use");
+                    .isInstanceOf(UsernameAlreadyExistsException.class)
+                    .hasMessageContaining(USERNAME);
 
             verify(userRepository, never()).save(any());
             verifyNoInteractions(jwtService);

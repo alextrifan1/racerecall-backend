@@ -1,6 +1,7 @@
 package com.racerecall.backend.controllers;
 
 
+import com.racerecall.backend.exceptions.UsernameAlreadyExistsException;
 import com.racerecall.backend.models.AuthResponse;
 import com.racerecall.backend.services.AuthService;
 import com.racerecall.backend.services.CustomUserDetailsService;
@@ -62,15 +63,16 @@ public class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/register with a taken username is NOT handled (BUG: real server returns 500)")
-    void register_usernameTaken_exceptionEscapesController() {
-        when(authService.register(any()))
-                .thenThrow(new IllegalStateException("Username is already in use"));
+    @DisplayName("POST /api/auth/register with a taken username returns 409 with a problem detail")
+    void register_usernameTaken_returns409() throws Exception {
+        when(authService.register(any())).thenThrow(new UsernameAlreadyExistsException("alex"));
 
-        assertThatThrownBy(() -> mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(CREDENTIALS_JSON)))
-                .hasRootCauseInstanceOf(IllegalStateException.class);
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CREDENTIALS_JSON))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Username already exists"))
+                .andExpect(jsonPath("$.detail").value("Username 'alex' already exists."));
     }
 
     @Test
