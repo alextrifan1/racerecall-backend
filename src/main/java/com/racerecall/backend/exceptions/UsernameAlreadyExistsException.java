@@ -1,4 +1,7 @@
 package com.racerecall.backend.exceptions;
 
-public class UsernameAlreadyExistsException {
+public class UsernameAlreadyExistsException extends RuntimeException {
+    public UsernameAlreadyExistsException(String username) {
+        super("Username '" + username + "' already exists.");
+    }
 }

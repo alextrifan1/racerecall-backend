@@ -1,6 +1,7 @@
 package com.racerecall.backend.services;
 
 import com.racerecall.backend.entities.User;
+import com.racerecall.backend.exceptions.UsernameAlreadyExistsException;
 import com.racerecall.backend.models.AuthRequest;
 import com.racerecall.backend.models.AuthResponse;
 import com.racerecall.backend.repositories.UserRepository;
@@ -30,7 +31,7 @@ public class AuthService {
 
     public AuthResponse register(AuthRequest authRequest) {
         if (userRepository.findByUsername(authRequest.getUsername()).isPresent()) {
-            throw new IllegalStateException("Username is already in use");
+            throw new UsernameAlreadyExistsException(authRequest.getUsername());
         }
 
         User user = new User(

@@ -1,6 +1,7 @@
 package com.racerecall.backend.services;
 
 import com.racerecall.backend.clients.OpenF1Client;
+import com.racerecall.backend.exceptions.SessionNotFoundException;
 import com.racerecall.backend.models.DriverDto;
 import com.racerecall.backend.models.DriverResultDto;
 import com.racerecall.backend.models.SessionDetailsDto;
@@ -16,9 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.tuple;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class SessionServiceTest {
@@ -158,10 +160,15 @@ public class SessionServiceTest {
         }
 
         @Test
-        @DisplayName("unknown session key throws NullPointerException (BUG: should be 404)")
-        void unknownSessionKey_throwsNullPointerException() {
+        @DisplayName("unknown session key throws SessionNotFoundException and fetches nothing else")
+        void unknownSessionKey_throwsSessionNotFound() {
+            // fetchSessionByKey is NOT stubbed -> the mock returns null, like the real client does
+
             assertThatThrownBy(() -> sessionService.getSessionDetails(SESSION_KEY))
-                    .isInstanceOf(NullPointerException.class);
+                    .isInstanceOf(SessionNotFoundException.class)
+                    .hasMessageContaining(String.valueOf(SESSION_KEY));
+
+            verify(openF1Client, never()).fetchSessionResults(anyInt());
         }
     }
 }

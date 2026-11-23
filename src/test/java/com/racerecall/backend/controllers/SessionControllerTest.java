@@ -1,5 +1,6 @@
 package com.racerecall.backend.controllers;
 
+import com.racerecall.backend.exceptions.SessionNotFoundException;
 import com.racerecall.backend.models.DriverResultDto;
 import com.racerecall.backend.models.SessionDetailsDto;
 import com.racerecall.backend.models.SessionDto;
@@ -116,6 +117,18 @@ public class SessionControllerTest {
                     .andExpect(jsonPath("$.podium[0].broadcast_name").value("M VERSTAPPEN"))
                     .andExpect(jsonPath("$.podium[0].team_name").value("Red Bull Racing"))
                     .andExpect(jsonPath("$.weatherSnapshot.air_temperature").value(24.5));
+        }
+
+        @Test
+        @DisplayName("unknown session key returns 404 with a problem detail")
+        void unknownSession_returns404() throws Exception {
+            when(sessionService.getSessionDetails(SESSION_KEY))
+                    .thenThrow(new SessionNotFoundException(SESSION_KEY));
+
+            mockMvc.perform(get("/api/sessions/{key}/details", SESSION_KEY))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.title").value("Session not found"))
+                    .andExpect(jsonPath("$.detail").value("No session found with key " + SESSION_KEY));
         }
     }
 
