@@ -79,7 +79,7 @@ public class SessionControllerTest {
                 "-1, 10",   // negative page
                 "0, 0",     // empty page
                 "0, -5",    // negative size
-                "0, 51"     // too large
+                "0, 101"     // too large
         })
         @DisplayName("invalid pagination returns 400 and never reaches the service")
         void invalidPagination_returns400(int page, int size) throws Exception {
@@ -89,6 +89,16 @@ public class SessionControllerTest {
                     .andExpect(status().isBadRequest());
 
             verifyNoInteractions(sessionService);
+        }
+
+        @Test
+        @DisplayName("the exact request sent by the frontend is accepted")
+        void frontendRequest_isAccepted() throws Exception {
+            mockMvc.perform(get("/api/sessions")
+                            .param("year", "2026")
+                            .param("page", "0")
+                            .param("size", "100"))
+                    .andExpect(status().isOk());
         }
 
         @Test

@@ -24,7 +24,7 @@ public class SessionController {
     public List<SessionDto> getSession(
             @RequestParam(defaultValue = "2026") int year,
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
 
         return sessionService.getPaginatedSessions(year, page, size);
     }
