@@ -96,7 +96,7 @@ public class SessionServiceTest {
         }
 
         @Test
-        @DisplayName("negative page throws (BUG: should be rejected with 400 instead)")
+        @DisplayName("negative page throws (input is validated in the controller, the service assumes valid input)")
         void negativePage_throws() {
             when(openF1Client.fetchSessions(YEAR)).thenReturn(season);
 

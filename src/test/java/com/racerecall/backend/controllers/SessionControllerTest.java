@@ -14,6 +14,8 @@ import io.jsonwebtoken.MalformedJwtException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -70,6 +72,23 @@ public class SessionControllerTest {
             mockMvc.perform(get("/api/sessions"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].session_key").value(1));
+        }
+
+        @ParameterizedTest(name = "page={0}, size={1} -> 400")
+        @CsvSource({
+                "-1, 10",   // negative page
+                "0, 0",     // empty page
+                "0, -5",    // negative size
+                "0, 51"     // too large
+        })
+        @DisplayName("invalid pagination returns 400 and never reaches the service")
+        void invalidPagination_returns400(int page, int size) throws Exception {
+            mockMvc.perform(get("/api/sessions")
+                            .param("page", String.valueOf(page))
+                            .param("size", String.valueOf(size)))
+                    .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(sessionService);
         }
 
         @Test

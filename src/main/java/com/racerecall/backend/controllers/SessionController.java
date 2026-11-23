@@ -4,6 +4,8 @@ import com.racerecall.backend.models.SessionDetailsDto;
 import com.racerecall.backend.models.SessionDto;
 import com.racerecall.backend.services.SessionService;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 
 import java.util.List;
 
@@ -21,8 +23,8 @@ public class SessionController {
     @GetMapping
     public List<SessionDto> getSession(
             @RequestParam(defaultValue = "2026") int year,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size) {
 
         return sessionService.getPaginatedSessions(year, page, size);
     }
