@@ -124,32 +124,38 @@ public class SessionControllerTest {
     class Security {
 
         @Test
-        @DisplayName("malformed token on a PUBLIC endpoint crashes the filter (BUG: should be ignored or 401)")
-        void malformedToken_onPublicEndpoint_crashesFilter() {
-            when(jwtService.extractUsername("not-a-jwt"))
-                    .thenThrow(new MalformedJwtException("Malformed JWT"));
+        @DisplayName("malformed token on public endpoint is ignored and request is allowed")
+        void malformedTone_onPublicEndpoint_isIgnored() throws Exception {
+            when(jwtService.extractUsername("not-a-jwt")).thenThrow(new MalformedJwtException("Malformed JWT"));
 
-            Throwable thrown = catchThrowable(() -> mockMvc.perform(get("/api/sessions")
-                    .header("Authorization", "Bearer not-a-jwt")));
+            mockMvc.perform(get("/api/sessions")
+                            .header("Authorization", "Bearer not-a-jwt"))
+                    .andExpect(status().isOk());
 
-            assertThat(thrown).isNotNull();
-            assertThat(NestedExceptionUtils.getMostSpecificCause(thrown)).isInstanceOf(JwtException.class);
-            verifyNoInteractions(sessionService);
+            verify(sessionService).getPaginatedSessions(2026, 0, 10);
         }
 
         @Test
-        @DisplayName("valid token for a deleted user crashes the filter (BUG: should be ignored or 401)")
-        void tokenForDeletedUser_crashesFilter() {
+        @DisplayName("token for a deleted user is ignored and the request succeeds")
+        void tokenForDeletedUser_onPublicEndpoint_isIgnored() throws Exception {
             when(jwtService.extractUsername("old-token")).thenReturn("deleted-user");
-            when(userDetailsService.loadUserByUsername("deleted-user"))
-                    .thenThrow(new UsernameNotFoundException("User not found: deleted-user"));
+            when(userDetailsService.loadUserByUsername("deleted-user")).thenThrow(new UsernameNotFoundException("User not found"));
 
-            Throwable thrown = catchThrowable(() -> mockMvc.perform(get("/api/sessions")
-                    .header("Authorization", "Bearer old-token")));
+            mockMvc.perform(get("/api/sessions")
+                            .header("Authorization", "Bearer old-token"))
+                    .andExpect(status().isOk());
 
-            assertThat(thrown).isNotNull();
-            assertThat(NestedExceptionUtils.getMostSpecificCause(thrown))
-                    .isInstanceOf(UsernameNotFoundException.class);
+            verify(userDetailsService).loadUserByUsername("deleted-user");
+        }
+
+        @Test
+        @DisplayName("malformed token on a protected route is rejected, it does NOT grant access")
+        void malformedToken_onProtectedRoute_isRejected() throws Exception {
+            when(jwtService.extractUsername("not-a-jwt")).thenThrow(new MalformedJwtException("Malformed JWT"));
+
+            mockMvc.perform(get("/api/something-private")
+                            .header("Authorization", "Bearer not-a-jwt"))
+                    .andExpect(status().isForbidden());
         }
 
         @Test
