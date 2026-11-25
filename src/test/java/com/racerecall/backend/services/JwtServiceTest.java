@@ -1,6 +1,7 @@
 package com.racerecall.backend.services;
 
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.security.WeakKeyException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,22 +12,21 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class JwtServiceTest {
 
-    private static final String SECRET_KEY = "test-secret-key-32-characters-long-for-testing-purposes-only";
-    private static final long ONE_HOUR_MS  = 3_600_000L;
+    private static final String SECRET = "test-secret-that-is-at-least-32-characters-long";
+    private static final long ONE_HOUR_MS = 3_600_000L;
 
     private JwtService jwtService;
 
     @BeforeEach
-    void setup() {
-        jwtService = createJwtService(SECRET_KEY, ONE_HOUR_MS);
+    void setUp() {
+        jwtService = new JwtService(SECRET, ONE_HOUR_MS);
     }
 
-    // Helper: JwtService gets its fields from @Value, which only works inside Spring.
-    private JwtService createJwtService(String secretKey, long expirationMs) {
-        JwtService service = new JwtService();
-        ReflectionTestUtils.setField(service, "secretKey", secretKey);
-        ReflectionTestUtils.setField(service, "jwtExpirationMs", expirationMs);
-        return service;
+    @Test
+    @DisplayName("a secret shorter than 32 bytes is rejected when the service is created")
+    void constructor_shortSecret_failsFast() {
+        assertThatThrownBy(() -> new JwtService("too-short", ONE_HOUR_MS))
+                .isInstanceOf(WeakKeyException.class);
     }
 
     @Test
@@ -56,7 +56,7 @@ public class JwtServiceTest {
     @Test
     @DisplayName("isTokenValid returns false for an expired token")
     void isTokenValid_expiredToken_returnsFalse() {
-        JwtService shortLived = createJwtService(SECRET_KEY, -1000L);
+        JwtService shortLived = new JwtService(SECRET, -1000L);
         String token = shortLived.generateToken("user");
 
         assertThat(shortLived.isTokenValid(token, "user")).isFalse();
@@ -65,7 +65,7 @@ public class JwtServiceTest {
     @Test
     @DisplayName("isTokenValid returns false for a token signed with a different secret")
     void isTokenValid_wrongSignature_returnsFalse() {
-        JwtService attacker = createJwtService("another-secret-that-is-also-32-characters-long", ONE_HOUR_MS);
+        JwtService attacker = new JwtService("another-secret-that-is-also-32-characters-long", ONE_HOUR_MS);
         String forgedToken = attacker.generateToken("alex");
 
         assertThat(jwtService.isTokenValid(forgedToken, "alex")).isFalse();

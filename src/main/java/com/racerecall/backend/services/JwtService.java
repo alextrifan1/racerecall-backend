@@ -1,7 +1,6 @@
 package com.racerecall.backend.services;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -15,14 +14,13 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
+    private final SecretKey signingKey;
+    private final long jwtExpirationMs;
 
-    @Value("${jwt.expiration-ms}")
-    private long jwtExpirationMs;
-
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    public JwtService(@Value("${jwt.secret}") String secret,
+                      @Value("${jwt.expiration-ms}") long jwtExpirationMs) {
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.jwtExpirationMs = jwtExpirationMs;
     }
 
     public String generateToken(String username) {
@@ -33,7 +31,7 @@ public class JwtService {
                 .subject(username)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(getSigningKey())
+                .signWith(signingKey)
                 .compact();
     }
 
@@ -53,7 +51,7 @@ public class JwtService {
 
     private Claims getClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
