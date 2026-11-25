@@ -8,10 +8,10 @@ on:
 permissions:
   contents: read
 
-# A new push to the same branch cancels the run that's still going
+# On PRs, a new push cancels the old run. On main, every commit runs to completion.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
