@@ -1,5 +1,6 @@
 package com.racerecall.backend.clients;
 
+import com.racerecall.backend.exceptions.OpenF1UnavailableException;
 import com.racerecall.backend.models.SessionDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,7 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 class OpenF1ClientTest {
 
@@ -102,18 +104,18 @@ class OpenF1ClientTest {
     }
 
     @Test
-    @DisplayName("fetchSessions does not retry a 500 and returns an empty list (error is swallowed)")
-    void fetchSessions_serverError_returnsEmptyListWithoutRetry() {
+    @DisplayName("fetchSessions throws OpenF1UnavailableException on a 500, without retrying")
+    void fetchSessions_serverError_throwsOpenF1Unavailable() {
         respondWithStatus(HttpStatus.INTERNAL_SERVER_ERROR);
 
-        List<SessionDto> sessions = client.fetchSessions(2025);
+        assertThatThrownBy(() -> client.fetchSessions(2025))
+                .isInstanceOf(OpenF1UnavailableException.class);
 
-        assertThat(sessions).isEmpty();
         assertThat(requests).hasSize(1);
     }
 
     @Test
-    @DisplayName("fetchSessionByKey returns null when OpenF1 has no such session (root cause of the NPE in SessionService)")
+    @DisplayName("fetchSessionByKey returns null when OpenF1 has no such session (SessionService turns it into 404)")
     void fetchSessionByKey_noSuchSession_returnsNull() {
         respondWithJson("[]");
 

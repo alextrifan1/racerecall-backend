@@ -1,5 +1,6 @@
 package com.racerecall.backend.clients;
 
+import com.racerecall.backend.exceptions.OpenF1UnavailableException;
 import com.racerecall.backend.models.SessionDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @SpringJUnitConfig(OpenF1ClientCachingTest.Config.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD) // fresh cache for every test
@@ -87,19 +89,20 @@ class OpenF1ClientCachingTest {
     }
 
     @Test
-    @DisplayName("a failed response is cached as an empty list (BUG: data stays missing until restart)")
-    void failedResponse_isCachedAsEmptyList() {
+    @DisplayName("a failed response is NOT cached: after OpenF1 recovers, the data is fetched again")
+    void failedResponse_isNotCached() {
         // OpenF1 is down
         fakeOpenF1.status = HttpStatus.INTERNAL_SERVER_ERROR;
-        client.fetchSessions(2025);
+        assertThatThrownBy(() -> client.fetchSessions(2025))
+                .isInstanceOf(OpenF1UnavailableException.class);
 
-        // OpenF1 recovers...
+        // OpenF1 recovers
         fakeOpenF1.status = HttpStatus.OK;
         fakeOpenF1.body = ONE_SESSION_JSON;
         List<SessionDto> afterRecovery = client.fetchSessions(2025);
 
-        // ...but the app never asks again
-        assertThat(afterRecovery).isEmpty();
-        assertThat(fakeOpenF1.calls).hasValue(1);
+        // the app asks again and gets the real data
+        assertThat(afterRecovery).hasSize(1);
+        assertThat(fakeOpenF1.calls).hasValue(2);
     }
 }
