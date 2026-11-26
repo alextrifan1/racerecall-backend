@@ -34,8 +34,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(SessionController.class)
 @Import(SecurityConfig.class)
@@ -177,6 +176,21 @@ public class SessionControllerTest {
     @Nested
     @DisplayName("security")
     class Security {
+
+        @Test
+        @DisplayName("CORS: an allowed origin gets the Access-Control-Allow-Origin header")
+        void cors_allowedOrigin_isAccepted() throws Exception {
+            mockMvc.perform(get("/api/sessions").header("Origin", "http://localhost:5173"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+        }
+
+        @Test
+        @DisplayName("CORS: an unknown origin is rejected")
+        void cors_unknownOrigin_isRejected() throws Exception {
+            mockMvc.perform(get("/api/sessions").header("Origin", "https://evil.example"))
+                    .andExpect(status().isForbidden());
+        }
 
         @Test
         @DisplayName("malformed token on public endpoint is ignored and request is allowed")
