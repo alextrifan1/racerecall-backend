@@ -37,6 +37,7 @@ public class OpenF1Client {
                 .bodyToFlux(type)
                 .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(1))
                     .filter(OpenF1Client::isTooManyRequests))
+                .onErrorResume(WebClientResponseException.NotFound.class, e -> Flux.empty()) // OpenF1 answers 404 when a query matches no data (e.g. no starting grid for practice)
                 .onErrorMap(e -> new OpenF1UnavailableException("OpenF1 request failed: " + uriTemplate, e));
     }
 
