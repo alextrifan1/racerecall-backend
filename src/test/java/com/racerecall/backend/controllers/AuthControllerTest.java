@@ -4,11 +4,13 @@ package com.racerecall.backend.controllers;
 import com.racerecall.backend.exceptions.UsernameAlreadyExistsException;
 import com.racerecall.backend.models.AuthResponse;
 import com.racerecall.backend.services.AuthService;
-import com.racerecall.backend.services.CustomUserDetailsService;
-import com.racerecall.backend.services.JwtService;
-import com.racerecall.backend.services.SecurityConfig;
+import com.racerecall.backend.security.CustomUserDetailsService;
+import com.racerecall.backend.security.JwtService;
+import com.racerecall.backend.security.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -49,6 +52,43 @@ public class AuthControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService userDetailsService;
+
+    @ParameterizedTest(name = "{0}")
+    @
+            CsvSource(delimiter = '|', value = {
+            "blank username | ''   | secret123 | username",
+            "short username | ab   | secret123 | username",
+            "blank password | alex | ''        | password",
+            "short password | alex | short     | password"
+    })
+    @DisplayName("POST /api/auth/register with invalid input returns 400 with the failing field")
+    void register_invalidInput_returns400(String caseName, String username, String password, String field) throws Exception {
+        String json = """
+            {"username": "%s", "password": "%s"}
+            """.formatted(username, password);
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Validation failed"))
+                .andExpect(jsonPath("$.errors." + field).exists());
+
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/login is not validated: a short password still reaches the service")
+    void login_shortPassword_isNotValidated() throws Exception {
+        when(authService.login(any())).thenThrow(new BadCredentialsException("Bad credentials"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {"username": "alex", "password": "short"}
+                            """))
+                .andExpect(status().isUnauthorized());
+    }
 
     @Test
     @DisplayName("POST /api/auth/register returns 201 and the token, without needing a JWT")

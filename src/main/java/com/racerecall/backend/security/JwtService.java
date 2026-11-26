@@ -1,4 +1,4 @@
-package com.racerecall.backend.services;
+package com.racerecall.backend.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

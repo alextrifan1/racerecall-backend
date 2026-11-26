@@ -6,11 +6,10 @@ import com.racerecall.backend.models.DriverResultDto;
 import com.racerecall.backend.models.SessionDetailsDto;
 import com.racerecall.backend.models.SessionDto;
 import com.racerecall.backend.models.WeatherDto;
-import com.racerecall.backend.services.CustomUserDetailsService;
-import com.racerecall.backend.services.JwtService;
-import com.racerecall.backend.services.SecurityConfig;
+import com.racerecall.backend.security.CustomUserDetailsService;
+import com.racerecall.backend.security.JwtService;
+import com.racerecall.backend.security.SecurityConfig;
 import com.racerecall.backend.services.SessionService;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,7 +19,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -29,13 +27,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(SessionController.class)
 @Import(SecurityConfig.class)
@@ -177,6 +173,21 @@ public class SessionControllerTest {
     @Nested
     @DisplayName("security")
     class Security {
+
+        @Test
+        @DisplayName("CORS: an allowed origin gets the Access-Control-Allow-Origin header")
+        void cors_allowedOrigin_isAccepted() throws Exception {
+            mockMvc.perform(get("/api/sessions").header("Origin", "http://localhost:5173"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+        }
+
+        @Test
+        @DisplayName("CORS: an unknown origin is rejected")
+        void cors_unknownOrigin_isRejected() throws Exception {
+            mockMvc.perform(get("/api/sessions").header("Origin", "https://evil.example"))
+                    .andExpect(status().isForbidden());
+        }
 
         @Test
         @DisplayName("malformed token on public endpoint is ignored and request is allowed")

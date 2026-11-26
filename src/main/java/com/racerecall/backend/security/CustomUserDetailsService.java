@@ -1,4 +1,4 @@
-package com.racerecall.backend.services;
+package com.racerecall.backend.security;
 
 import com.racerecall.backend.entities.User;
 import com.racerecall.backend.repositories.UserRepository;
