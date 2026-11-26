@@ -5,6 +5,7 @@ import com.racerecall.backend.exceptions.UsernameAlreadyExistsException;
 import com.racerecall.backend.models.AuthRequest;
 import com.racerecall.backend.models.AuthResponse;
 import com.racerecall.backend.repositories.UserRepository;
+import com.racerecall.backend.security.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
