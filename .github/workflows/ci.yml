@@ -68,3 +68,34 @@ jobs:
           echo "App did not become ready in time. Container logs:"
           docker logs app
           exit 1
+  deploy:
+    name: Deploy to production
+    needs: [ test, docker ]
+    # Only after a merge to main, never on pull requests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://racerecall-frontend.vercel.app
+    # Never run two deploys at the same time, and never cancel one halfway
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Run deploy script on the VM
+        env:
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_HOST: ${{ secrets.VM_HOST }}
+        # The forced command in authorized_keys runs deploy-racerecall.sh;
+        # its exit code (0 = ready, 1 = not ready) becomes the result of this step
+        run: ssh -i ~/.ssh/deploy_key "$VM_USER@$VM_HOST"
