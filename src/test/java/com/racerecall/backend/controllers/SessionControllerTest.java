@@ -1,5 +1,6 @@
 package com.racerecall.backend.controllers;
 
+import com.racerecall.backend.exceptions.OpenF1UnavailableException;
 import com.racerecall.backend.exceptions.SessionNotFoundException;
 import com.racerecall.backend.models.DriverResultDto;
 import com.racerecall.backend.models.SessionDetailsDto;
@@ -120,6 +121,18 @@ public class SessionControllerTest {
                     .andExpect(status().isBadRequest());
 
             verifyNoInteractions(sessionService);
+        }
+
+        @Test
+        @DisplayName("OpenF1 being unavailable returns 502 with a problem detail")
+        void openF1Unavailable_returns502() throws Exception {
+            when(sessionService.getPaginatedSessions(2026, 0, 10))
+                    .thenThrow(new OpenF1UnavailableException("OpenF1 request failed", new RuntimeException("timeout")));
+
+            mockMvc.perform(get("/api/sessions"))
+                    .andExpect(status().isBadGateway())
+                    .andExpect(jsonPath("$.title").value("Upstream service unavailable"))
+                    .andExpect(jsonPath("$.detail").value("Formula 1 data is temporarily unavailable. Please try again later."));
         }
     }
 
